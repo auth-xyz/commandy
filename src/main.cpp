@@ -20,7 +20,12 @@ int main(int argc, char *argv[]) {
 
     if (!cli.has_option("list")) {
       std::string distro = cli.get_argument("distro");
-      std::cout << "\n" << getDistroIcon(distro) << distro << ": " << command.getCommand(distro) << "\n";
+      std::cout << "\n"
+                << Icon::ARROW << " " << getDistroColor(distro)
+                << getDistroIcon(distro) << " " << distro << ": "
+                << Color::RESET << Color::DIM << command.getCommand(distro)
+                << "\n";
+
     } else {
       auto distros = command.getSupportedDistros();
       if (distros.empty()) {
@@ -29,24 +34,18 @@ int main(int argc, char *argv[]) {
       }
       std::cout << "\n";
       for (const auto &d : distros) {
-        std::cout << "  "
-                  << Icon::ARROW
-                  << " "
-                  << getDistroColor(d)
-                  << getDistroIcon(d)
-                  << " "
-                  << d 
-                  << ": " 
-                  << Color::RESET
-                  << Color::DIM
-                  << command.getCommand(d) 
-                  << Color::RESET
+        std::cout << "  " << Icon::ARROW << " " << getDistroColor(d)
+                  << getDistroIcon(d) << " " << d << ": " << Color::RESET
+                  << Color::DIM << command.getCommand(d) << Color::RESET
                   << "\n";
-
       }
     }
 
   } catch (const std::exception &err) {
-    std::cerr << err.what() << std::endl;
+    std::cout << Color::BLACK << Color::BG_RED << Icon::ERROR << " "
+              << "Something went wrong...\n"
+              << Color::RESET;
+
+    std::cerr << Color::BRIGHT_RED << err.what() << std::endl;
   }
 }
