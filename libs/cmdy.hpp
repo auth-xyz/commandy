@@ -49,7 +49,8 @@ const std::string BRIGHT_WHITE = "\033[97m";
 namespace Icon {
 const std::string UBUNTU = "\uef72";  // Ubuntu logo
 const std::string FEDORA = "\ue7d9";  // Fedora logo
-const std::string ALPINE = "\uf300";  // Alpine logo 
+const std::string ALPINE = "\uf300";  // Alpine logo
+const std::string WSL    = "\ue62a";  // Windows (WSL) logo
 const std::string ARCH = "\ue732";    // Arch logo
 const std::string SUSE = "\uef6d";    // SUSE logo
 const std::string GENTOO = "\ue7e6";  // Gentoo logo
@@ -80,6 +81,12 @@ std::string getDistroIcon(const std::string &distro) {
     return Icon::SUSE;
   if (distro == "gentoo")
     return Icon::GENTOO;
+
+  if (distro == "kali")
+    return Icon::DEBIAN;
+  if (distro == "windows")
+    return Icon::WSL;
+
   return Icon::PACKAGE;
 }
 
@@ -87,7 +94,8 @@ std::string getDistroIcon(const std::string &distro) {
 std::string getDistroColor(const std::string &distro) {
   if (distro == "ubuntu" || distro == "debian")
     return Color::BRIGHT_MAGENTA;
-  if (distro == "fedora" || distro == "centos" || distro == "rhel")
+  if (distro == "fedora" || distro == "centos" || distro == "rhel" ||
+      distro == "kali")
     return Color::BRIGHT_BLUE;
   if (distro == "alpine")
     return Color::BRIGHT_CYAN;
@@ -199,75 +207,54 @@ public:
 std::ostream &operator<<(std::ostream &os, const CommandInfo &cmdInfo) {
   // Create a box around the output
   int width = 80;
-  std::string topBorder = u8"╭" + std::string(width - 2, '─') + u8"╮";
-  std::string bottomBorder = u8"╰" + std::string(width - 2, '─') + u8"╯";
-  std::string midBorder = u8"├" + std::string(width - 2, '─') + u8"┤";
 
-  os << '\n' << Color::BRIGHT_CYAN << topBorder << Color::RESET << '\n';
+  os << '\n';
 
   // Command header
-  os << Color::BRIGHT_CYAN << "│ " << Color::RESET << Icon::COMMAND << " "
-     << Color::BOLD << Color::BRIGHT_WHITE << "Command: " << Color::RESET
-     << Color::BRIGHT_YELLOW << cmdInfo.name << Color::RESET
-     << std::string(width - 15 - cmdInfo.name.length(), ' ')
-     << Color::BRIGHT_CYAN << "│" << Color::RESET << '\n';
-
-  os << Color::BRIGHT_CYAN << midBorder << Color::RESET << '\n';
+  os << Color::BOLD << Color::BRIGHT_WHITE << "Command: " << Color::RESET
+     << Color::BRIGHT_YELLOW << cmdInfo.name << Color::RESET << '\n';
 
   // Installation commands section
-  os << Color::BRIGHT_CYAN << "│ " << Color::RESET << Icon::PACKAGE << " "
-     << Color::BOLD << Color::BRIGHT_WHITE
-     << "Installation Commands:" << Color::RESET << std::string(width - 27, ' ')
-     << Color::BRIGHT_CYAN << "│" << Color::RESET << '\n';
+  os << Color::BOLD << Color::BRIGHT_WHITE
+     << "Installation Commands:" << Color::RESET << '\n';
 
   if (cmdInfo.installCommands.empty()) {
-    os << Color::BRIGHT_CYAN << "│ " << Color::RESET << Icon::WARN << " "
+    os << Icon::WARN << " "
        << Color::YELLOW << "No installation commands found" << Color::RESET
-       << std::string(width - 35, ' ') << Color::BRIGHT_CYAN << "│"
-       << Color::RESET << '\n';
+       << '\n';
   } else {
     for (const auto &[distro, cmd] : cmdInfo.installCommands) {
       std::string distroIcon = getDistroIcon(distro);
       std::string distroColor = getDistroColor(distro);
 
-      os << Color::BRIGHT_CYAN << "│ " << Color::RESET;
-
       // Format distro with icon and color
       os << distroIcon << " " << distroColor << std::left << std::setw(10)
          << distro << Color::RESET;
 
-      // Format the command with spacing (split long commands across multiple
-      // lines)
+      // Format the command
       std::string formattedCmd = cmdInfo.formatCommand(cmd);
-      int maxCmdLength =
-          width - 20; // Account for left padding, distro name, and right border
+      int maxCmdLength = width - 12; // Account for left padding and distro name
 
       if (cmd.length() <= maxCmdLength) {
-        os << Icon::ARROW << " " << formattedCmd;
-        os << std::string(maxCmdLength - cmd.length(), ' ')
-           << Color::BRIGHT_CYAN << "│" << Color::RESET << '\n';
+        os << Icon::ARROW << " " << formattedCmd << '\n';
       } else {
         // Handle long commands by wrapping them
         os << Icon::ARROW << " " << formattedCmd.substr(0, maxCmdLength - 3)
-           << "...";
-        os << Color::BRIGHT_CYAN << "│" << Color::RESET << '\n';
+           << "..." << '\n';
 
         // Output the rest on next lines with proper indentation
         size_t pos = maxCmdLength - 3;
         while (pos < formattedCmd.length()) {
           size_t chunk = std::min(static_cast<size_t>(maxCmdLength - 12),
                                   formattedCmd.length() - pos);
-          os << Color::BRIGHT_CYAN << "│ " << Color::RESET;
-          os << std::string(12, ' ') << formattedCmd.substr(pos, chunk);
+          os << std::string(12, ' ') << formattedCmd.substr(pos, chunk) << '\n';
           pos += chunk;
-          os << std::string(maxCmdLength - chunk, ' ') << Color::BRIGHT_CYAN
-             << "│" << Color::RESET << '\n';
         }
       }
     }
   }
 
-  os << Color::BRIGHT_CYAN << bottomBorder << Color::RESET << '\n';
+  os << '\n';
   return os;
 }
 
@@ -369,8 +356,6 @@ public:
     if (!curl) {
       throw std::runtime_error("Failed to initialize cURL");
     }
-
-    // Display a fancy startup banner
   }
 
   ~Commandy() {
